@@ -1,5 +1,5 @@
 JAVAC=javac
-CLASSPATH=./com/cs262/dobj
+CLASSPATH=.
 
 SOURCES=$(wildcard com/cs262/dobj/*.java)
 CLASSES=$(SOURCES:.java=.class)
