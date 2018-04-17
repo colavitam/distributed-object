@@ -18,15 +18,4 @@ public class Main {
     BST<String, String> dbst = myContext.createDistributedInstance(bst, bst.getClass().getInterfaces());
     System.out.println(dbst.isEmpty());
   }
-
-
-  public static interface Empty {
-    public void doSomething();
-  }
-
-  public static class MyDumbClass implements Empty, Serializable {
-    public void doSomething() {
-      System.out.println("Something is done");
-    }
-  }
 }
