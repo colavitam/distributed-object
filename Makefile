@@ -1,7 +1,9 @@
 JAVAC=javac
 CLASSPATH=.
 
-SOURCES=$(wildcard com/cs262/dobj/*.java)
+SRCDIRS=com/cs262/dobj com/cs262/dobj/test
+
+SOURCES=$(foreach d, $(SRCDIRS), $(wildcard $(d)/*.java))
 CLASSES=$(SOURCES:.java=.class)
 
 all: $(CLASSES)
