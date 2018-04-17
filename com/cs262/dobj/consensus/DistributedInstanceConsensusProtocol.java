@@ -8,4 +8,5 @@ public interface DistributedInstanceConsensusProtocol {
   public void completeOperation();
   public Object performOperation(Method method, Serializable[] args, long operationNumber) throws IOException;
   public void terminateAtomicGroup() throws IOException;
+  public <T extends Serializable> void registerUpdateObject(T instance);
 }
