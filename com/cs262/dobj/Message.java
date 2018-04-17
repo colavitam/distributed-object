@@ -2,7 +2,7 @@ package com.cs262.dobj;
 
 import java.io.Serializable;
 
-public class Message<T extends Serializable> {
+public class Message<T extends Serializable> implements Serializable {
   private String id;
   private T content;
 
