@@ -11,11 +11,16 @@ public class Main {
       }
     };
     DistributedContext myContext = new DistributedContext(myChannel);
-    MyDumbClass instance = myContext.createDistributedInstance(MyDumbClass.class);
+    Empty instance = myContext.createDistributedInstance(new MyDumbClass(), new Class<?>[] { Empty.class });
     instance.doSomething();
   }
 
-  private class MyDumbClass {
+
+  public static interface Empty {
+    public void doSomething();
+  }
+
+  public static class MyDumbClass implements Empty, Serializable {
     public void doSomething() {
       System.out.println("Something is done");
     }
