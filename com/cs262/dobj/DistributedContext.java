@@ -51,6 +51,7 @@ public class DistributedContext {
   }
 
   public <T> T atomicOperation(Supplier<T> operation) throws IOException {
+    // TODO: recursive atomic?
     T result;
 
     try {

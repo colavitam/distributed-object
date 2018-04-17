@@ -116,8 +116,10 @@ public class SocketDistributedChannel implements DistributedChannel {
     }
 
     public void close() throws IOException {
-      this.oos.close();
-      this.ois.close();
+      if (this.oos != null)
+        this.oos.close();
+      if (this.ois != null)
+        this.ois.close();
       this.sock.close();
     }
   }
