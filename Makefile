@@ -15,4 +15,4 @@ run: all
 	java com/cs262/dobj/test/Main
 
 clean:
-	rm $(CLASSES)
+	rm -f $(foreach d, $(SRCDIRS), $(d)/*.class)
