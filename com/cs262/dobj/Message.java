@@ -10,4 +10,12 @@ public class Message<T extends Serializable> implements Serializable {
     this.id = id;
     this.content = content;
   }
+
+  public String getId() {
+    return id;
+  }
+
+  public T getContent() {
+    return content;
+  }
 }

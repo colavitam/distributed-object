@@ -28,13 +28,15 @@ public class DistributedContext {
       if (atomicOpNum != -1)
         opNum = atomicOpNum;
       else
-        opNum = consensusProtocol.requestOperation(false);
+        opNum = consensusProtocol.requestOperation();
 
       consensusProtocol.performOperation(method, (Serializable[]) args, opNum); // TODO: lockstep for atomic?
+
       try {
         result = method.invoke(instance, args);
       } finally {
-        consensusProtocol.completeOperation();
+        if (atomicOpNum == -1)
+          consensusProtocol.completeOperation(opNum);
         atomicLock.unlock();
       }
 
@@ -56,9 +58,11 @@ public class DistributedContext {
 
     try {
       atomicLock.lock();
-      this.atomicOpNum = consensusProtocol.requestOperation(true);
+      this.atomicOpNum = consensusProtocol.requestOperation();
       result = operation.get();
     } finally {
+      consensusProtocol.completeOperation(opNum);
+
       atomicOpNum = -1;
       atomicLock.unlock();
     }
