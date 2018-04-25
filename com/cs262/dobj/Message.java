@@ -2,20 +2,11 @@ package com.cs262.dobj;
 
 import java.io.Serializable;
 
-public class Message<T extends Serializable> implements Serializable {
-  private String id;
-  private T content;
+public class Message implements Serializable {
+  public final long src; // who am I from?
+  // TODO uid and dst for a contagious message
 
-  public Message(String id, T content) {
-    this.id = id;
-    this.content = content;
-  }
-
-  public String getId() {
-    return id;
-  }
-
-  public T getContent() {
-    return content;
+  public Message(long src) {
+    this.src = src;
   }
 }

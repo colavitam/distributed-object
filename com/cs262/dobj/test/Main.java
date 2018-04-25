@@ -5,11 +5,10 @@ import java.io.*;
 
 public class Main {
   public static void main(String[] args) throws IOException {
-    DistributedChannel myChannel = new SocketDistributedChannel(9091);
-    DistributedContext myContext = new DistributedContext(myChannel);
-    
     BST<String, String> bst = new RedBlackBST<String, String>();
-    BST<String, String> dbst = myContext.createDistributedInstance(bst, bst.getClass().getInterfaces());
+    DistributedContext<> myContext = new DistributedContext<>(9091, bst);
+    BST<String, String> dbst = myContext.getDistributedInstance();
+
     System.out.println(dbst.isEmpty());
   }
 }
