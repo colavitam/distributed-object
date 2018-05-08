@@ -5,19 +5,19 @@ import java.io.*;
 import java.util.concurrent.locks.*;
 import java.util.function.*;
 
-import com.cs262.dobj.consensus.DistributedObjectConsensus;
+import com.cs262.dobj.consensus.ConsensusContext;
 
 /*
- * A DistributedContext serves as the central dispatch for invocations on the distributed object.
+ * A DistributedObject serves as the user-facing dispatch for invocations on the distributed object.
  */
-public class DistributedContext<ObjType extends Serializable> {
-  private DistributedObjectConsensus<ObjType> consensus; // server-replicated state
+public class DistributedObject<ObjType extends Serializable> {
+  private ConsensusContext<ObjType> consensus; // consensus protocol handler
   private ObjType inst; // distributed instance
   private Lock atomicLock; // lock for concurrent atomic operations
 
   /* create a new context and act as a server on the given port */
-  public DistributedContext(int serverPort, ObjType inst) throws IOException {
-    this.consensus = new DistributedObjectConsensus(inst, serverPort);
+  public DistributedObject(int serverPort, ObjType inst) throws IOException {
+    this.consensus = new ConsensusContext<>(inst, serverPort);
     this.inst = inst;
 
     this.atomicLock = new ReentrantLock();
@@ -25,8 +25,8 @@ public class DistributedContext<ObjType extends Serializable> {
 
   /* attempt to join to existing context at the given host,
    * and act as a server on the given port */
-  public DistributedContext(String hostName, int hostPort, int serverPort) throws Exception {
-    this.consensus = new DistributedObjectConsensus(hostName, hostPort, "localhost", serverPort, 1);
+  public DistributedObject(String hostName, int hostPort, int serverPort) throws Exception {
+    this.consensus = new ConsensusContext<>(hostName, hostPort, "localhost", serverPort, 1);
     this.inst = consensus.getInstance();
 
     this.atomicLock = new ReentrantLock();
@@ -67,7 +67,7 @@ public class DistributedContext<ObjType extends Serializable> {
     Class<?>[] interfaces = inst.getClass().getInterfaces();
     InvocationHandler handler = this.createHandler(inst);
 
-    return (ObjType) Proxy.newProxyInstance(DistributedContext.class.getClassLoader(), interfaces, handler);
+    return (ObjType) Proxy.newProxyInstance(DistributedObject.class.getClassLoader(), interfaces, handler);
   }
 
   public <T> T atomicOperation(Supplier<T> operation) throws IOException {

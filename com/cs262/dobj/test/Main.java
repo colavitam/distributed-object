@@ -5,8 +5,8 @@ import java.io.*;
 
 public class Main {
   public static void main(String[] args) throws IOException {
-    DistributedContext<BST<String, String>> myContext = new DistributedContext<>(9091, new RedBlackBST<String, String>());
-    BST<String, String> bst = myContext.getDistributedInstance();
+    DistributedObject<BST<String, String>> distributor = new DistributedObject<>(9091, new RedBlackBST<String, String>());
+    BST<String, String> bst = distributor.getDistributedInstance();
 
     System.out.println(bst.isEmpty());
   }

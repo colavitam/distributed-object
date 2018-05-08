@@ -5,7 +5,7 @@ import java.net.*;
 import java.io.*;
 
 /*
- * A DistributedObjectChannel is a single shared communication context.
+ * A DistributedChannel is a single shared communication context.
  *
  * An instance provides the means to send and receive messages to and from a
  * pool of participating processes.
@@ -22,14 +22,14 @@ import java.io.*;
  */
 // TODO make abstract class to generalize join request upcalls?
 // TODO should this just be an inner class
-public class DistributedObjectChannel {
-  private DistributedObjectConsensus consensus; // parent consensus instance TODO factor out interface
+public class DistributedChannel<State extends Serializable, Message extends Serializable> {
+  private DistributedChannelHandler<State, Message> handler; // parent message handler
   private HashMap<Long, PeerStream> peerSet; // set of peers
   public final long id; // this process's ID on the channel
 
   /* create a new channel; act as a server on the given port */
-  public DistributedObjectChannel(DistributedObjectConsensus consensus, int serverPort) throws IOException {
-    this.consensus = consensus;
+  public DistributedChannel(DistributedChannelHandler<State, Message> handler, int serverPort) throws IOException {
+    this.handler = handler;
     this.peerSet = new HashMap<>();
     this.id = 0;
 
@@ -38,8 +38,8 @@ public class DistributedObjectChannel {
   }
 
   /* create a new channel; act as a server on the given port */
-  public DistributedObjectChannel(DistributedObjectConsensus consensus, String hostName, int hostPort, String serverName, int serverPort, long myId) throws IOException, ClassNotFoundException, Exception {
-    this.consensus = consensus;
+  public DistributedChannel(DistributedChannelHandler<State, Message> handler, String hostName, int hostPort, String serverName, int serverPort, long myId) throws IOException, ClassNotFoundException, Exception {
+    this.handler = handler;
     this.peerSet = new HashMap<>();
     this.id = myId;
 
@@ -47,15 +47,15 @@ public class DistributedObjectChannel {
     PeerStream host = new PeerStream(new Socket(hostName, hostPort));
 
     // join handshake: send a JoinRequestMessage and get a WelcomeMessage back
-    host.writeObject(new JoinRequestMessage(myId, serverName, serverPort));
+    host.writeObject(new JoinMessage(myId, serverName, serverPort));
 
     ChannelMessage m = host.readObject();
-    if (m instanceof WelcomeMessage) {
-      WelcomeMessage wm = (WelcomeMessage) m;
+    if (m instanceof WelcomeMessage<?>) {
+      WelcomeMessage<State> wm = (WelcomeMessage<State>) m;
       peerSet.put(wm.src, host);
-      consensus.setState(wm.state);
+      handler.setState(wm.state);
     } else {
-      throw new Exception("response from hose was not a WelcomeMessage");
+      throw new Exception("response from host was not a WelcomeMessage");
     }
 
     // spawn local server
@@ -102,16 +102,20 @@ public class DistributedObjectChannel {
 
       try {
         ChannelMessage obj = stream.readObject();
-        if (obj instanceof JoinRequestMessage) {
+        if (obj instanceof JoinMessage) {
           // new peer, so register its joining
-          JoinRequestMessage jrm = (JoinRequestMessage) obj;
-          consensus.registerJoin(jrm.src, jrm.name, jrm.port); // TODO ID assignments
+          JoinMessage jm = (JoinMessage) obj;
 
-          putPeer(jrm.src, stream);
-          stream.writeObject(new WelcomeMessage(id, consensus.getState()));
-          spawnMonitor(jrm.src);
+          handler.registerPeer(jm.src, jm.name, jm.port); // TODO ID assignments
+          putPeer(jm.src, stream);
+
+          WelcomeMessage<State> wm = new WelcomeMessage<>(id, handler.getState());
+          stream.writeObject(wm);
+
+          spawnMonitor(jm.src);
         } else if (obj instanceof ConnectionMessage) {
           putPeer(obj.src, stream);
+
           spawnMonitor(obj.src);
         }
         System.err.println("newly connected peer did not perform handshake");
@@ -123,8 +127,9 @@ public class DistributedObjectChannel {
     });
   }
 
-  public void sendMessage(ChannelMessage message, long destination) throws IOException {
-    getPeer(destination).writeObject(message);
+  public void sendMessage(Message message, long destination) throws IOException {
+    ProtocolMessage<Message> pm = new ProtocolMessage<>(id, message);
+    getPeer(destination).writeObject(pm);
   }
 
   private synchronized void spawnMonitor(long id) {
@@ -155,9 +160,9 @@ public class DistributedObjectChannel {
   }
 
   private void dispatchReceipt(long id, ChannelMessage message) throws Exception {
-    if (message instanceof ConsensusMessage) {
-      ConsensusMessage cm = (ConsensusMessage) message;
-      consensus.processMessage(id, cm.mesg);
+    if (message instanceof ProtocolMessage<?>) {
+      ProtocolMessage<Message> pm = (ProtocolMessage<Message>) message;
+      handler.processMessage(id, pm.mesg);
     } else {
       throw new Exception("received bad message");
     }
