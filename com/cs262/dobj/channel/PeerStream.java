@@ -1,11 +1,11 @@
-package com.cs262.dobj.consensus;
+package com.cs262.dobj.channel;
 
 import java.net.*;
 import java.io.*;
 
 // wrapper class for sockets
 // serializes/deserializes objects passing through
-public class PeerStream {
+class PeerStream {
   private Socket sock;
   private ObjectOutputStream oos;
   private ObjectInputStream ois;

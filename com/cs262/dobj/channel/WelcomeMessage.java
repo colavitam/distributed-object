@@ -1,11 +1,11 @@
-package com.cs262.dobj.consensus;
+package com.cs262.dobj.channel;
 
 import java.io.Serializable;
 
 // coordination message in response to join request
 // "hello, you've connected to ID ..."
 // "our current distributed consensus state is ..."
-public class WelcomeMessage<T extends Serializable> extends ChannelMessage {
+class WelcomeMessage<T extends Serializable> extends ChannelMessage {
   public final T state;
 
   public WelcomeMessage(long src, T state) {

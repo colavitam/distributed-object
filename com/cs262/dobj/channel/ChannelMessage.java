@@ -1,8 +1,8 @@
-package com.cs262.dobj.consensus;
+package com.cs262.dobj.channel;
 
 import java.io.Serializable;
 
-public class ChannelMessage implements Serializable {
+class ChannelMessage implements Serializable {
   public final long src;
   // TODO uid, dst for a flood message
 

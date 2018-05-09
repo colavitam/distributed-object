@@ -1,4 +1,4 @@
-package com.cs262.dobj.consensus;
+package com.cs262.dobj.channel;
 
 import java.io.Serializable;
 

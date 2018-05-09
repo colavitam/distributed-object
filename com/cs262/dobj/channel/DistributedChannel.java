@@ -1,4 +1,4 @@
-package com.cs262.dobj.consensus;
+package com.cs262.dobj.channel;
 
 import java.util.HashMap;
 import java.net.*;
@@ -47,7 +47,7 @@ public class DistributedChannel<State extends Serializable, Message extends Seri
     PeerStream host = new PeerStream(new Socket(hostName, hostPort));
 
     // join handshake: send a JoinRequestMessage and get a WelcomeMessage back
-    host.writeObject(new JoinMessage(myId, serverName, serverPort));
+    host.writeObject(new RegisterMessage(myId, serverName, serverPort));
 
     ChannelMessage m = host.readObject();
     if (m instanceof WelcomeMessage<?>) {
@@ -89,7 +89,7 @@ public class DistributedChannel<State extends Serializable, Message extends Seri
 
   public void registerPeer(long peerId, String peerName, int peerPort) throws IOException {
     PeerStream stream = new PeerStream(new Socket(peerName, peerPort));
-    stream.writeObject(new ConnectionMessage(id));
+    stream.writeObject(new ConnectMessage(id));
 
     putPeer(peerId, stream);
     spawnMonitor(peerId);
@@ -102,18 +102,18 @@ public class DistributedChannel<State extends Serializable, Message extends Seri
 
       try {
         ChannelMessage obj = stream.readObject();
-        if (obj instanceof JoinMessage) {
+        if (obj instanceof RegisterMessage) {
           // new peer, so register its joining
-          JoinMessage jm = (JoinMessage) obj;
+          RegisterMessage rm = (RegisterMessage) obj;
 
-          handler.registerPeer(jm.src, jm.name, jm.port); // TODO ID assignments
-          putPeer(jm.src, stream);
+          handler.registerPeer(rm.src, rm.name, rm.port); // TODO ID assignments
+          putPeer(rm.src, stream);
 
           WelcomeMessage<State> wm = new WelcomeMessage<>(id, handler.getState());
           stream.writeObject(wm);
 
-          spawnMonitor(jm.src);
-        } else if (obj instanceof ConnectionMessage) {
+          spawnMonitor(rm.src);
+        } else if (obj instanceof ConnectMessage) {
           putPeer(obj.src, stream);
 
           spawnMonitor(obj.src);

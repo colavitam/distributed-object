@@ -2,7 +2,7 @@ JAVAC=javac
 CLASSPATH=.
 FLAGS=#-Xlint:unchecked
 
-SRCDIRS=com/cs262/dobj com/cs262/dobj/test com/cs262/dobj/consensus
+SRCDIRS=com/cs262/dobj com/cs262/dobj/test com/cs262/dobj/consensus com/cs262/dobj/channel
 
 SOURCES=$(foreach d, $(SRCDIRS), $(wildcard $(d)/*.java))
 CLASSES=$(SOURCES:.java=.class)
