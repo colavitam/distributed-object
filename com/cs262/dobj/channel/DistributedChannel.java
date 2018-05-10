@@ -127,9 +127,13 @@ public class DistributedChannel<State extends Serializable, Message extends Seri
     });
   }
 
-  public void sendMessage(Message message, long destination) throws IOException {
+  public void sendMessage(long destination, Message message) {
     ProtocolMessage<Message> pm = new ProtocolMessage<>(id, message);
-    getPeer(destination).writeObject(pm);
+    try {
+      getPeer(destination).writeObject(pm);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
   }
 
   private synchronized void spawnMonitor(long id) {
