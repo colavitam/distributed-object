@@ -1,9 +1,9 @@
 package com.cs262.dobj.consensus;
 
 class RequestMessage extends ConsensusMessage {
-  public final Operation operation;
+  public final Operation op;
 
-  public RequestMessage(Operation o) {
-    operation = o;
+  public RequestMessage(Operation op) {
+    this.op = op;
   }
 }

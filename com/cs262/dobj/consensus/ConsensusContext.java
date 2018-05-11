@@ -12,25 +12,49 @@ public class ConsensusContext<ObjType extends Serializable>
   private DistributedChannel<ConsensusState<ObjType>, ConsensusMessage> channel;
   private ConsensusState<ObjType> state;
 
+  private long opNum;
+
   public ConsensusContext(ObjType inst, int serverPort) throws IOException {
-    channel = new DistributedChannel<ConsensusState<ObjType>, ConsensusMessage>(this, serverPort);
-    state = new LeaderConsensusState(inst);
+    opNum = 0;
+    channel = new DistributedChannel<ConsensusState<ObjType>, ConsensusMessage>(this, serverPort, new LeaderConsensusState(inst));
+
+    channel.spawnServer(serverPort);
   }
 
   public ConsensusContext(String hostName, int hostPort, String serverName, int serverPort, long id) throws Exception {
+    opNum = 0;
     channel = new DistributedChannel<ConsensusState<ObjType>, ConsensusMessage>(this, hostName, hostPort, serverName, serverPort, id);
+    // state set by client construction
+
+    channel.spawnServer(serverPort);
+  }
+
+  public long getId() {
+    return channel.getId();
+  }
+
+  public synchronized long getFreshOpNum() {
+    return opNum++;
   }
 
   public synchronized ConsensusState<ObjType> getState() {
-    return new FollowerConsensusState(state);
+    return new AcceptorConsensusState(state);
   }
 
-  public synchronized void setState(ConsensusState<ObjType> state) {
+  // not synchronized b/c expect calls only during:
+  // - startup (synchronous)
+  // - state processing (synchronous)
+  public void setState(ConsensusState<ObjType> state) {
     this.state = state;
+    this.state.setContext(this);
+  }
+
+  public synchronized void sendMessage(long dst, ConsensusMessage mesg) {
+    channel.sendMessage(dst, mesg);
   }
 
   public synchronized void processMessage(long src, ConsensusMessage mesg) {
-    state.processMessage(this, channel, src, mesg);
+    state.processMessage(src, mesg);
   }
 
   public synchronized ObjType getInstance() {

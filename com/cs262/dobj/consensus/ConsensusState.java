@@ -1,10 +1,8 @@
 package com.cs262.dobj.consensus;
 
-import java.util.HashMap;
-import java.util.ArrayList;
+import java.util.*;
+import java.util.Map.Entry;
 import java.io.Serializable;
-
-import com.cs262.dobj.channel.*;
 
 /*
  * State maintained by an instance of the consensus algorithm.
@@ -15,26 +13,36 @@ import com.cs262.dobj.channel.*;
  * Similarly thread suspend-on-call and wake-on-response is implemented here.
  */
 abstract class ConsensusState<ObjType extends Serializable> implements Serializable {
-  // consensus state
+  // context
+  protected transient ConsensusContext<ObjType> ctx;
+
+  // consensus object state
   private ObjType inst; // instance of distributed object
-  private ArrayList<Operation> ledger;
 
   // current peer set
-  private class PeerInfo {
-    public final String peerName;
-    public final int peerPort;
+  private static class PeerInfo {
+    public String peerName;
+    public int peerPort;
+    public long startRound; // round this peer participates after
+    public long endRound;   // first round this peer should not participate in
 
-    public PeerInfo(String name, int port) {
+    public PeerInfo(String name, int port, long startRound) {
       this.peerName = name;
       this.peerPort = port;
+      this.startRound = startRound;
+      this.endRound = Long.MAX_VALUE;
     }
   }
   private HashMap<Long, PeerInfo> participants; // set of active participants in Paxos
   private long maxPeerId; // highest peer ID we've seen
 
+  // ledger info
+  private HashMap<Long, Operation> ledger;
+  private long checkpoint; // which sequence number is our object consistent with?
+
   public ConsensusState(ObjType inst) {
     this.inst = inst;
-    this.ledger = new ArrayList<Operation>();
+    this.ledger = new HashMap<>();
     this.participants = new HashMap<>();
     this.maxPeerId = 0;
   }
@@ -46,50 +54,79 @@ abstract class ConsensusState<ObjType extends Serializable> implements Serializa
     this.maxPeerId = state.maxPeerId;
   }
 
+  public synchronized void setContext(ConsensusContext<ObjType> ctx) {
+    this.ctx = ctx;
+  }
+
   public synchronized ObjType getInstance() {
     return inst;
   }
 
-  public synchronized void processMessage(ConsensusContext<ObjType> ctx,
-                                          DistributedChannel<?, ConsensusMessage> channel,
-                                          long src, ConsensusMessage mesg) {
+  public synchronized long getCheckpoint() {
+    return checkpoint;
+  }
+
+  // get set of participants at given round number
+  public synchronized Set<Long> getParticipants(long seqNum) {
+    // TODO make this more efficient
+    HashSet<Long> parts = new HashSet<>();
+    for (Entry<Long, PeerInfo> peer : participants.entrySet()) {
+      if (peer.getValue().startRound >= seqNum && seqNum < peer.getValue().endRound) {
+        parts.add(peer.getKey());
+      }
+    }
+    return parts;
+  }
+
+  public synchronized Set<Long> getParticipants() {
+    return participants.keySet();
+  }
+
+  public synchronized void processMessage(long src, ConsensusMessage mesg) {
     if (mesg instanceof RequestMessage) {
-      processRequest(ctx, channel, src, (RequestMessage) mesg);
+      processRequest(src, (RequestMessage) mesg);
     } else if (mesg instanceof PrepareMessage) {
-      processPrepare(ctx, channel, src, (PrepareMessage) mesg);
+      processPrepare(src, (PrepareMessage) mesg);
+    } else if (mesg instanceof AbortPrepareMessage) {
+      processAbortPrepare(src, (AbortPrepareMessage) mesg);
     } else if (mesg instanceof PromiseMessage) {
-      processPromise(ctx, channel, src, (PromiseMessage) mesg);
+      processPromise(src, (PromiseMessage) mesg);
     } else if (mesg instanceof AcceptMessage) {
-      processAccept(ctx, channel, src, (AcceptMessage) mesg);
+      processAccept(src, (AcceptMessage) mesg);
+    } else if (mesg instanceof AbortAcceptMessage) {
+      processAbortAccept(src, (AbortAcceptMessage) mesg);
     } else if (mesg instanceof AcceptedMessage) {
-      processAccepted(ctx, channel, src, (AcceptedMessage) mesg);
+      processAccepted(src, (AcceptedMessage) mesg);
     } else if (mesg instanceof ChosenMessage) {
-      processChosen(ctx, channel, src, (ChosenMessage) mesg);
+      processChosen(src, (ChosenMessage) mesg);
     } else {
       // unknown message type; ignore
     }
   }
 
-  protected abstract void processRequest(ConsensusContext<ObjType> ctx,
-                                         DistributedChannel<?, ConsensusMessage> channel,
-                                         long src, RequestMessage m);
-  protected abstract void processPrepare(ConsensusContext<ObjType> ctx,
-                                         DistributedChannel<?, ConsensusMessage> channel,
-                                         long src, PrepareMessage m);
-  protected abstract void processPromise(ConsensusContext<ObjType> ctx,
-                                         DistributedChannel<?, ConsensusMessage> channel,
-                                         long src, PromiseMessage m);
-  protected abstract void processAccept(ConsensusContext<ObjType> ctx,
-                                        DistributedChannel<?, ConsensusMessage> channel,
-                                        long src, AcceptMessage m);
-  protected abstract void processAccepted(ConsensusContext<ObjType> ctx,
-                                          DistributedChannel<?, ConsensusMessage> channel,
-                                          long src, AcceptedMessage m);
+  // for timeout use
+  protected synchronized void processEvent() {
 
-  protected void processChosen(ConsensusContext<ObjType> ctx,
-                               DistributedChannel<?, ConsensusMessage> channel,
-                               long src, ChosenMessage m) {
+  }
+
+  protected void processRequest(long src, RequestMessage m) { }
+
+  protected void processPrepare(long src, PrepareMessage m) { }
+
+  protected void processPromise(long src, PromiseMessage m) { }
+  protected void processAbortPrepare(long src, AbortPrepareMessage m) { }
+
+  protected void processAccept(long src, AcceptMessage m) { }
+  protected void processAbortAccept(long src, AbortAcceptMessage m) { }
+
+  protected void processAccepted(long src, AcceptedMessage m) { }
+
+  private void processChosen(long src, ChosenMessage m) {
     // add to ledger
     // catchup: apply contiguous ledger ops to objects
+  }
+
+  private void applyOperation(Operation op) {
+
   }
 }

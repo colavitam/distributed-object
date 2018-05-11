@@ -25,16 +25,15 @@ import java.io.*;
 public class DistributedChannel<State extends Serializable, Message extends Serializable> {
   private DistributedChannelHandler<State, Message> handler; // parent message handler
   private HashMap<Long, PeerStream> peerSet; // set of peers
-  public final long id; // this process's ID on the channel
+  private long id; // this process's ID on the channel
 
   /* create a new channel; act as a server on the given port */
-  public DistributedChannel(DistributedChannelHandler<State, Message> handler, int serverPort) throws IOException {
+  public DistributedChannel(DistributedChannelHandler<State, Message> handler, int serverPort, State startState) throws IOException {
     this.handler = handler;
     this.peerSet = new HashMap<>();
     this.id = 0;
 
-    // spawn local server
-    spawnServer(serverPort);
+    handler.setState(startState);
   }
 
   /* create a new channel; act as a server on the given port */
@@ -57,12 +56,13 @@ public class DistributedChannel<State extends Serializable, Message extends Seri
     } else {
       throw new Exception("response from host was not a WelcomeMessage");
     }
-
-    // spawn local server
-    spawnServer(serverPort);
   }
 
-  private void spawnServer(int port) throws IOException {
+  public long getId() {
+    return id;
+  }
+
+  public void spawnServer(int port) throws IOException {
     ServerSocket ssock = new ServerSocket(port);
 
     Thread server = new Thread(() -> {
@@ -125,15 +125,21 @@ public class DistributedChannel<State extends Serializable, Message extends Seri
         e.printStackTrace();
       }
     });
+
+    registrar.start();
   }
 
-  public void sendMessage(long destination, Message message) {
-    ProtocolMessage<Message> pm = new ProtocolMessage<>(id, message);
-    try {
-      getPeer(destination).writeObject(pm);
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
+  public synchronized void sendMessage(long destination, Message message) {
+    Thread sender = new Thread(() -> {
+      ProtocolMessage<Message> pm = new ProtocolMessage<>(id, message);
+      try {
+        getPeer(destination).writeObject(pm);
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    });
+
+    sender.start();
   }
 
   private synchronized void spawnMonitor(long id) {
