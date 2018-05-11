@@ -40,18 +40,28 @@ abstract class ConsensusState<ObjType extends Serializable> implements Serializa
   private HashMap<Long, Operation> ledger;
   private long checkpoint; // which sequence number is our object consistent with?
 
+  private long leader; // who do we think should be the leader?
+  // this is not really paxos-managed state
+  // it's not critical for it to be correct
+
   public ConsensusState(ObjType inst) {
     this.inst = inst;
-    this.ledger = new HashMap<>();
     this.participants = new HashMap<>();
     this.maxPeerId = 0;
+    this.leader = 0;
+
+    this.ledger = new HashMap<>();
+    this.checkpoint = 0;
   }
 
   public ConsensusState(ConsensusState<ObjType> state) {
     this.inst = state.inst;
-    this.ledger = state.ledger;
     this.participants = state.participants;
     this.maxPeerId = state.maxPeerId;
+    this.leader = state.leader;
+
+    this.ledger = state.ledger;
+    this.checkpoint = state.checkpoint;
   }
 
   public synchronized void setContext(ConsensusContext<ObjType> ctx) {
@@ -64,6 +74,14 @@ abstract class ConsensusState<ObjType extends Serializable> implements Serializa
 
   public synchronized long getCheckpoint() {
     return checkpoint;
+  }
+
+  public synchronized long getLeader() {
+    return leader;
+  }
+
+  protected void setLeader(long leader) {
+    this.leader = leader;
   }
 
   // get set of participants at given round number
@@ -85,6 +103,8 @@ abstract class ConsensusState<ObjType extends Serializable> implements Serializa
   public synchronized void processMessage(long src, ConsensusMessage mesg) {
     if (mesg instanceof RequestMessage) {
       processRequest(src, (RequestMessage) mesg);
+    } else if (mesg instanceof LeaderMessage) {
+      processLeader(src, (LeaderMessage) mesg);
     } else if (mesg instanceof PrepareMessage) {
       processPrepare(src, (PrepareMessage) mesg);
     } else if (mesg instanceof AbortPrepareMessage) {
@@ -110,6 +130,10 @@ abstract class ConsensusState<ObjType extends Serializable> implements Serializa
   }
 
   protected void processRequest(long src, RequestMessage m) { }
+
+  private void processLeader(long src, LeaderMessage m) {
+    setLeader(m.leaderId);
+  }
 
   protected void processPrepare(long src, PrepareMessage m) { }
 

@@ -27,7 +27,7 @@ class AcceptorConsensusState<ObjType extends Serializable> extends ConsensusStat
 
   protected void processRequest(long src, RequestMessage m) {
     // reply to inform requester who leader is
-    // TODO
+    ctx.sendMessage(src, new LeaderMessage(getLeader()));
   }
 
   protected void processPrepare(long src, PrepareMessage m) {
@@ -67,6 +67,7 @@ class AcceptorConsensusState<ObjType extends Serializable> extends ConsensusStat
     // ensure same operation as before, if there was one
     if (phase.src == src && phase.propNum == propNum && m.op.isSame(phase.accepted)) {
       // send accepted
+      setLeader(src); // accept acknowledges leadership
       proposals.put(seqNum, new PhaseInfo(src, propNum, m.op));
       ctx.sendMessage(src, new AcceptedMessage(seqNum, m.op, phase));
     } else {

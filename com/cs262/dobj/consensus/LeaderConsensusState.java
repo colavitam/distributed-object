@@ -170,6 +170,11 @@ class LeaderConsensusState<ObjType extends Serializable> extends AcceptorConsens
     earliestFresh = getCheckpoint();
   }
 
+  public synchronized void setContext(ConsensusContext<ObjType> ctx) {
+    super.setContext(ctx);
+    setLeader(ctx.getId()); // grab leadership
+  }
+
   // got a request; execute prepare broadcast for paxos
   // TODO start client heartbeat thread
   // TODO start timeout thread
@@ -246,6 +251,7 @@ class LeaderConsensusState<ObjType extends Serializable> extends AcceptorConsens
     // (we got a quorum of promises, which has since been disrupted)
     if (m.phase.src > ctx.getId()) {
       // if they're bigger than us, abdicate leadership
+      setLeader(m.phase.src);
       ctx.setState(new AcceptorConsensusState(this));
       // TODO make sure this goes to the right constructor
     } else {
